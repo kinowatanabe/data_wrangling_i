@@ -1,0 +1,52 @@
+---
+title: "Data Manipulation"
+output: github_document
+---
+
+# Section 1
+
+```{r}
+library(tidyverse)
+```
+
+Let's import the dataset.
+
+```{r}
+
+```
+```{r}
+litters_df = 
+  read_csv("./data_import_examples/FAS_litters.csv", na = c(".", "NA", ""))
+
+litters_df = 
+    janitor::clean_names(litters_df)
+
+pups_df = 
+  read_csv("./data_import_examples/FAS_pups.csv", na = c(".", "NA", ""))
+
+pups_df = 
+    janitor::clean_names(pups_df)
+
+```
+
+```{r}
+select(litters_df, group, litter_number, gd0_weight)
+```
+
+
+```{r}
+select(pups_df, sex, litter_number, pd_ears)
+```
+
+```{r}
+select(pups_df, sex == 1)
+select(pups_df, pd_walk < 11, sex == 2)
+```
+```{r}
+pups_df = 
+      read_csv("./data_import_examples/FAS_pups.csv", skip = 3, na = c("NA", ".", "")) |> 
+      janitor::clean_names() |> 
+      filter(sex==1) |> 
+      select(-pd_ears) |> 
+      mutate(pd_pivot_ge7 = pd_pivot >=7)
+```

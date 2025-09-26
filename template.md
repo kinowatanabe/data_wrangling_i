@@ -25,7 +25,7 @@ library(haven)
 
 Let’s import a dataset.
 
-read_csv better than
+- read_csv better than read.csv
 
 ``` r
 litters_df = 
@@ -41,6 +41,8 @@ litters_df =
     ## ℹ Use `spec()` to retrieve the full column specification for this data.
     ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 
+Look at your data!
+
 ``` r
 names(litters_df)
 ```
@@ -49,12 +51,16 @@ names(litters_df)
     ## [4] "GD18 weight"       "GD of Birth"       "Pups born alive"  
     ## [7] "Pups dead @ birth" "Pups survive"
 
+- Assessing a variable with a space in it is difficult!
+
 Update the names in ‘litters_df’
 
 ``` r
 litters_df = 
     janitor::clean_names(litters_df)
 ```
+
+Look at the data!
 
 ``` r
 litters_df
@@ -75,6 +81,8 @@ litters_df
     ## 10 Con8  #3/5/2/2/95     28.5       <NA>                 20               8
     ## # ℹ 39 more rows
     ## # ℹ 2 more variables: pups_dead_birth <dbl>, pups_survive <dbl>
+
+Sometimes skimming data is neat?
 
 ``` r
 skimr::skim(litters_df)
@@ -112,9 +120,11 @@ Data summary
 | pups_dead_birth |         0 |             1 |  0.33 | 0.75 |   0 |   0 |   0 |   0 |    4 | ▇▂▁▁▁ |
 | pups_survive    |         0 |             1 |  6.41 | 2.05 |   1 |   5 |   7 |   8 |    9 | ▁▃▂▇▇ |
 
+Fix the missingness.
+
 ``` r
 litters_df = 
-    read_csv(file = "./data_import_examples/FAS_litters.csv",
+    read_csv(file = "data_import_examples/FAS_litters.csv",
         na = c(".", "NA", ""),
     col_types = cols(
       Group = col_factor()
@@ -122,9 +132,13 @@ litters_df =
 )
 ```
 
+## Import Pups, missing rows
+
+First 3 lines of FAS_df is missing.
+
 ``` r
 pups_df = 
-    read_csv("./data_import_examples/FAS_pups.csv",
+    read_csv("data_import_examples/FAS_pups.csv",
              skip = 3,
                na = c(".", "NA", "")
             )
@@ -176,19 +190,47 @@ Data summary
 | PD pivot      |        13 |          0.96 |  7.09 | 1.51 |   4 |   6 |   7 |   8 |   12 | ▂▇▂▂▁ |
 | PD walk       |         0 |          1.00 |  9.50 | 1.34 |   7 |   9 |   9 |  10 |   14 | ▆▇▇▂▁ |
 
+## mlb excel
+
+- CSVs are great, but sometimes you get excel files.
+
 ``` r
 mlb_df = 
-  read_excel ("./data_import_examples/mlb11.xlsx")
+  read_excel("data_import_examples/mlb11.xlsx")
 ```
+
+- You can also skip rows, specify sheets, and specify range.
+
+## fotr excel, select range for tables
 
 ``` r
 fotr_df = 
-    read_excel("./data_import_examples/LotR_Words.xlsx", range = "B3:D6")
+    read_excel("data_import_examples/LotR_Words.xlsx", range = "B3:D6")
 ```
 
+## pulse SAS data
+
 ``` r
-pulse_df = read_sas("./data_import_examples/public_pulse_data.sas7bdat")
+pulse_df = read_sas("data_import_examples/public_pulse_data.sas7bdat")
 
 pulse_df = 
   janitor::clean_names(pulse_df)
 ```
+
+## why do i hate read.csv
+
+``` r
+litters_df_baseR = 
+    read.csv("data_import_examples/FAS_litters.csv")
+```
+
+- prints our whole dataset, code-formatting isn’t useful, no info on
+  rows/columns
+
+## what about data exporting, save data externally
+
+``` r
+write_csv(fotr_df, "data_import_examples/fotr_df.csv")
+```
+
+write_csv(df name, “location you want to save at/name of csv.csv”)
