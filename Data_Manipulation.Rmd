@@ -12,41 +12,164 @@ library(tidyverse)
 Let's import the dataset.
 
 ```{r}
-
-```
-```{r}
 litters_df = 
-  read_csv("./data_import_examples/FAS_litters.csv", na = c(".", "NA", ""))
+  read_csv("data_import_examples/FAS_litters.csv", na = c(".", "NA", ""))
 
 litters_df = 
     janitor::clean_names(litters_df)
 
 pups_df = 
-  read_csv("./data_import_examples/FAS_pups.csv", na = c(".", "NA", ""))
+  read_csv("data_import_examples/FAS_pups.csv", skip = 3, na = c(".", "NA", ""))
 
 pups_df = 
     janitor::clean_names(pups_df)
-
 ```
 
+## select 
+
+`select` selects variables from my dataframe.
+
+* select specific variables
 ```{r}
 select(litters_df, group, litter_number, gd0_weight)
 ```
 
-
+*select range of variables
 ```{r}
-select(pups_df, sex, litter_number, pd_ears)
+select(litters_df, group:gd_of_birth)
 ```
 
+* select by removal
 ```{r}
-select(pups_df, sex == 1)
-select(pups_df, pd_walk < 11, sex == 2)
+select(litters_df, -group)
+select(litters_df, -(group:gd_of_birth))
 ```
+
+* select by prefix
+```{r}
+select(litters_df, group, starts_with("gd"))
+```
+
+* rearrange by selecting
+```{r}
+ select(litters_df, starts_with("gd"), group)
+ select(litters_df, litter_number, everything())
+ 
+ relocate(litters_df, litter_number)
+```
+    *Keeps same variables but rearranges in the way I ordered.
+    *relocate does same thing but select works
+
+* rename by selecting everything
+```{r}
+select(litters_df, GROUP = group, everything())
+rename(litters_df, GROUP = group)
+```
+    * Rename group as GROUP and keep everything
+    * `rename` does same thing
+
+ 
+* what if i only select one variable?
+```{r}
+select(litters_df, group)
+pull(litters_df, group)
+```
+  * you shouldn't pull variables out of df to mutate them. use dplyr functions to manipulate       inside the df.
+
+
+## learning assessment
+
+```{r}
+select(pups_df, litter_number, sex, pd_ears)
+```
+
+## filter
+
+use `filter()` to filter out rows 
+
+```{r}
+filter(litters_df, gd_of_birth == 20, pups_born_alive ==6)
+
+```
+
+* Look for more than 2 pups alive.
+```{r}
+filter(litters_df, pups_born_alive >= 5)
+filter(litters_df, pups_born_alive == 5)
+filter(litters_df, pups_born_alive <= 5)
+```
+
+* look for non-matches
+```{r}
+filter(litters_df, pups_born_alive != 6)
+```
+    * pups born alive not equal (!=) to 6
+
+* match to a set
+```{r}
+filter(litters_df, group %in% c("Con7", "Con8"))
+```
+    * any group that's in the collection control7 or control 8
+
+* filter out missing rows with `drop_na()`
+```{r}
+drop_na(litters_df)
+drop_na(litters_df, gd0_weight)
+```
+
+## learning assessment
+```{r}
+filter(pups_df, sex == 1)
+filter(pups_df, pd_walk < 11, sex == 2)
+```
+
+## mutate
+
+`mutate()` to create or modify variables
+
+```{r}
+mutate(
+    litters_df, 
+    wt_gain = gd18_weight - gd0_weight,
+    group = str_to_lower(group)
+)
+```
+    * `str_to_lower()` makes string variables lower case
+
+
+## arrange
+`arrange()` arranges things 
+```{r}
+arrange(litters_df, pups_born_alive)
+arrange(litters_df, group, pups_born_alive)
+
+```
+  *order ascending by variable
+
+
+## PIPES
+
+```{r}
+litters_df=
+    read_csv("data_import_examples/FAS_litters.csv", na = c(".", "NA", "")) |> 
+    janitor::clean_names() |> 
+    select(group, litter_number, starts_with("gd")) |> 
+    drop_na() |> 
+    mutate(
+        wt_gain = gd18_weight - gd0_weight
+    )
+    
+```
+
+
+##learning assessment
 ```{r}
 pups_df = 
-      read_csv("./data_import_examples/FAS_pups.csv", skip = 3, na = c("NA", ".", "")) |> 
-      janitor::clean_names() |> 
-      filter(sex==1) |> 
-      select(-pd_ears) |> 
-      mutate(pd_pivot_ge7 = pd_pivot >=7)
+    read_csv("data_import_examples/FAS_pups.csv", skip = 3, na = c("NA", ".", "")) |> 
+    janitor::clean_names() |> 
+    filter(sex == 1) |> 
+    select(-pd_ears) |> 
+    mutate(
+        pd_days_ge7 = pd_pivot >= 7
+    )
 ```
