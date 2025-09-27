@@ -355,37 +355,168 @@ display: none;
 </div>
 
 
+<p>This document will show you how to tidy data.</p>
+<div id="pivot-longer" class="section level2">
+<h2>Pivot Longer</h2>
+<ul>
+<li>hint we wide –&gt; long format: obs increase</li>
+<li>we now have 4 rows per id</li>
+<li>names_prefix = You want to strip off “bdi_score” from the front of
+your column names</li>
+<li>mutate bc now bl (baseline) is the only one without XXm format</li>
+<li>relocate =&gt; put “id” and “visit” first</li>
+</ul>
 <pre class="r"><code>pulse_df = 
-  haven::read_sas(&quot;./data_import_examples/public_pulse_data.sas7bdat&quot;) |&gt;
-  janitor::clean_names()
-
-pulse_df</code></pre>
-<pre><code>## # A tibble: 1,087 × 7
-##      id   age sex   bdi_score_bl bdi_score_01m bdi_score_06m bdi_score_12m
-##   &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;        &lt;dbl&gt;         &lt;dbl&gt;         &lt;dbl&gt;         &lt;dbl&gt;
-## 1 10003  48.0 male             7             1             2             0
-## 2 10015  72.5 male             6            NA            NA            NA
-## 3 10022  58.5 male            14             3             8            NA
-## 4 10026  72.7 male            20             6            18            16
-## 5 10035  60.4 male             4             0             1             2
-## # ℹ 1,082 more rows</code></pre>
-<pre class="r"><code>pulse_tidy_df = 
+    haven::read_sas(&quot;data_import_examples/public_pulse_data.sas7bdat&quot;) |&gt;
+    janitor::clean_names() |&gt; 
+    pivot_longer(
+      cols =  bdi_score_bl:bdi_score_12m,
+      names_to = &quot;visit&quot;, 
+      values_to = &quot;bdi&quot;,
+      names_prefix = &quot;bdi_score_&quot;) |&gt; 
+    mutate (
+      visit = replace(visit, visit == &quot;bl&quot;, &quot;00m&quot;)) |&gt; 
+    relocate(id, visit)</code></pre>
+</div>
+<div id="learnin-assessment" class="section level2">
+<h2>Learnin Assessment</h2>
+<p>Do one more example!</p>
+<pre class="r"><code>litters_df = 
+  read_csv(&quot;data_import_examples/FAS_litters.csv&quot;) |&gt;
+  janitor::clean_names() |&gt; 
+  select(litter_number, ends_with(&quot;weight&quot;)) |&gt; 
   pivot_longer(
-    pulse_df, 
-    bdi_score_bl:bdi_score_12m,
-    names_to = &quot;visit&quot;, 
-    values_to = &quot;bdi&quot;)
+      cols = gd0_weight:gd18_weight, 
+      names_to = &quot;gd&quot;,
+      values_to = &quot;weight&quot;) |&gt; 
+  mutate(
+      gd = case_match(gd,
+          &quot;gd0_weight&quot;  ~ 0,
+          &quot;gd18_weight&quot; ~ 18
+       )
+  )</code></pre>
+<pre><code>## Rows: 49 Columns: 8
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (4): Group, Litter Number, GD0 weight, GD18 weight
+## dbl (4): GD of Birth, Pups born alive, Pups dead @ birth, Pups survive
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+<div id="pivot-wider" class="section level2">
+<h2>Pivot wider</h2>
+<pre><code>* manually making dataset</code></pre>
+<pre class="r"><code>analysis_df =
+  tibble(
+    group = c(&quot;treatment&quot;, &quot;treatment&quot;, &quot;placebo&quot;, &quot;placebo&quot;),
+    time = c(&quot;pre&quot;, &quot;post&quot;, &quot;pre&quot;, &quot;post&quot;),
+    mean = c(4, 8, 3.5, 4)
+  )</code></pre>
+<p>Pivot wider for human readability.</p>
+<pre class="r"><code>analysis_df |&gt; 
+  pivot_wider(
+      names_from = &quot;time&quot;,
+      values_from = &quot;mean&quot;
+) |&gt; 
+  knitr::kable()</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th align="left">group</th>
+<th align="right">pre</th>
+<th align="right">post</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">treatment</td>
+<td align="right">4.0</td>
+<td align="right">8</td>
+</tr>
+<tr class="even">
+<td align="left">placebo</td>
+<td align="right">3.5</td>
+<td align="right">4</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>wide format advantages:
+<ul>
+<li>take differences btwn pre/post</li>
+<li>multiple time points and want to identify pattern between columns at
+diff time points</li>
+</ul></li>
+<li>knitr::kable() –&gt; makes clean 2x2 table in viewer</li>
+</ul>
+</div>
+<div id="bind-tables" class="section level2">
+<h2>bind tables</h2>
+<pre class="r"><code>fellowship_ring = 
+    read_excel(&quot;data_import_examples/LotR_Words.xlsx&quot;, range = &quot;B3:D6&quot;) |&gt; 
+    mutate(movie = &quot;fellowship_ring&quot;)
 
-pulse_tidy_df</code></pre>
-<pre><code>## # A tibble: 4,348 × 5
-##      id   age sex   visit           bdi
-##   &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt; &lt;chr&gt;         &lt;dbl&gt;
-## 1 10003  48.0 male  bdi_score_bl      7
-## 2 10003  48.0 male  bdi_score_01m     1
-## 3 10003  48.0 male  bdi_score_06m     2
-## 4 10003  48.0 male  bdi_score_12m     0
-## 5 10015  72.5 male  bdi_score_bl      6
-## # ℹ 4,343 more rows</code></pre>
+two_towers = 
+    read_excel(&quot;data_import_examples/LotR_Words.xlsx&quot;, range = &quot;F3:H6&quot;) |&gt; 
+    mutate(movie = &quot;two_towers&quot;)
+
+return_king = 
+    read_excel(&quot;data_import_examples/LotR_Words.xlsx&quot;, range = &quot;J3:L6&quot;) |&gt; 
+    mutate(movie = &quot;return_king&quot;)
+
+lotr_df = 
+  bind_rows(fellowship_ring, two_towers, return_king) |&gt; 
+  janitor::clean_names() |&gt; 
+  pivot_longer(
+    cols = female:male,
+    names_to = &quot;sex&quot;,
+    values_to = &quot;words&quot;
+  ) |&gt; 
+  select(movie, everything()) |&gt; 
+  mutate(race = str_to_lower(race))</code></pre>
+</div>
+<div id="join-the-fas-datasets" class="section level2">
+<h2>Join the FAS datasets</h2>
+<pre class="r"><code>litters_df = 
+    read_csv(&quot;data_import_examples/FAS_litters.csv&quot;, na = c(&quot;.&quot;, &quot;NA&quot;, &quot;&quot;)) |&gt; 
+    janitor::clean_names() |&gt; 
+    mutate(wt_gain = gd18_weight - gd0_weight) |&gt; 
+    separate(
+      group, into = c(&quot;dose&quot;, &quot;day_of_treatment&quot;),
+      sep = 3
+    )</code></pre>
+<pre><code>## Rows: 49 Columns: 8
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (2): Group, Litter Number
+## dbl (6): GD0 weight, GD18 weight, GD of Birth, Pups born alive, Pups dead @ ...
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<ul>
+<li>separate(var you want to split up, into = c(““), separate on 3rd
+letter)</li>
+</ul>
+<p>Import the <code>pups</code> next.</p>
+<pre class="r"><code>pups_df = 
+    read_csv(&quot;data_import_examples/FAS_pups.csv&quot;, skip = 3, na = c(&quot;.&quot;, &quot;NA&quot;, &quot;&quot;)) |&gt; 
+    janitor::clean_names() |&gt; 
+    mutate(sex = case_match(sex,
+          1 ~ &quot;male&quot;,
+          2 ~ &quot;female&quot;))</code></pre>
+<pre><code>## Rows: 313 Columns: 6
+## ── Column specification ────────────────────────────────────────────────────────
+## Delimiter: &quot;,&quot;
+## chr (1): Litter Number
+## dbl (5): Sex, PD ears, PD eyes, PD pivot, PD walk
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+<p>Join the data sets!!</p>
+<pre class="r"><code>fas_df = 
+  left_join(pups_df, litters_df, by = &quot;litter_number&quot;)</code></pre>
+</div>
 
 
 

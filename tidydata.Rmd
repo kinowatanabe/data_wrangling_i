@@ -4,47 +4,144 @@ output: html_document
 date: "2025-09-23"
 ---
 
-```{r setup, include=FALSE}
+```{r setup, echo = FALSE, message = FALSE}
 library(tidyverse)
+library(readxl)
 library(haven)
 
 options(tibble.print_min = 5)
-
 ```
 
+This document will show you how to tidy data.
+
+## Pivot Longer
+
+  * hint we wide --> long format: obs increase
+  * we now have 4 rows per id
+  * names_prefix = You want to strip off "bdi_score" from the front of your column names
+  * mutate bc now bl (baseline) is the only one without XXm format
+  * relocate => put "id" and "visit" first
 ```{r}
 pulse_df = 
-  haven::read_sas("./data_import_examples/public_pulse_data.sas7bdat") |>
-  janitor::clean_names()
-
-pulse_df
-
-pulse_tidy_df = 
-  pivot_longer(
-    pulse_df, 
-    bdi_score_bl:bdi_score_12m,
-    names_to = "visit", 
-    values_to = "bdi")
-
-pulse_tidy_df
+    haven::read_sas("data_import_examples/public_pulse_data.sas7bdat") |>
+    janitor::clean_names() |> 
+    pivot_longer(
+      cols =  bdi_score_bl:bdi_score_12m,
+      names_to = "visit", 
+      values_to = "bdi",
+      names_prefix = "bdi_score_") |> 
+    mutate (
+      visit = replace(visit, visit == "bl", "00m")) |> 
+    relocate(id, visit)
 
 ```
+
+## Learnin Assessment
+Do one more example!
+```{r}
+litters_df = 
+  read_csv("data_import_examples/FAS_litters.csv") |>
+  janitor::clean_names() |> 
+  select(litter_number, ends_with("weight")) |> 
+  pivot_longer(
+      cols = gd0_weight:gd18_weight, 
+      names_to = "gd",
+      values_to = "weight") |> 
+  mutate(
+      gd = case_match(gd,
+          "gd0_weight"  ~ 0,
+          "gd18_weight" ~ 18
+       )
+  )
+```
+
+## Pivot wider
+
+    * manually making dataset
+    
+```{r}
+analysis_df =
+  tibble(
+    group = c("treatment", "treatment", "placebo", "placebo"),
+    time = c("pre", "post", "pre", "post"),
+    mean = c(4, 8, 3.5, 4)
+  )
+```
+
+Pivot wider for human readability.
+
+```{r}
+analysis_df |> 
+  pivot_wider(
+      names_from = "time",
+      values_from = "mean"
+) |> 
+  knitr::kable()
+  
+```
+* wide format advantages:
+    * take differences btwn pre/post
+    *  multiple time points and want to identify pattern between columns at diff time points
+    
+*  knitr::kable() --> makes clean 2x2 table in viewer 
+
+## bind tables
+
+```{r}
+fellowship_ring = 
+    read_excel("data_import_examples/LotR_Words.xlsx", range = "B3:D6") |> 
+    mutate(movie = "fellowship_ring")
+
+two_towers = 
+    read_excel("data_import_examples/LotR_Words.xlsx", range = "F3:H6") |> 
+    mutate(movie = "two_towers")
+
+return_king = 
+    read_excel("data_import_examples/LotR_Words.xlsx", range = "J3:L6") |> 
+    mutate(movie = "return_king")
+
+lotr_df = 
+  bind_rows(fellowship_ring, two_towers, return_king) |> 
+  janitor::clean_names() |> 
+  pivot_longer(
+    cols = female:male,
+    names_to = "sex",
+    values_to = "words"
+  ) |> 
+  select(movie, everything()) |> 
+  mutate(race = str_to_lower(race))
+```
+## Join the FAS datasets
 
 ```{r}
 litters_df = 
-  read_csv("./data_import_examples/FAS_litters.csv") |>
-  janitor::clean_names() |>
-
-litters_df
-
-litters_tidy_df = 
-  pivot_longer(
-    pulse_df, 
-    bdi_score_bl:bdi_score_12m,
-    names_to = "visit", 
-    values_to = "bdi")
-
-pulse_tidy_df
-
+    read_csv("data_import_examples/FAS_litters.csv", na = c(".", "NA", "")) |> 
+    janitor::clean_names() |> 
+    mutate(wt_gain = gd18_weight - gd0_weight) |> 
+    separate(
+      group, into = c("dose", "day_of_treatment"),
+      sep = 3
+    )
 ```
+  * separate(var you want to split up, into = c(""), separate on 3rd letter)
+
+Import the `pups` next.
+
+```{r}
+pups_df = 
+    read_csv("data_import_examples/FAS_pups.csv", skip = 3, na = c(".", "NA", "")) |> 
+    janitor::clean_names() |> 
+    mutate(sex = case_match(sex,
+          1 ~ "male",
+          2 ~ "female"))
+```
+
+Join the data sets!!
+```{r}
+fas_df = 
+  left_join(pups_df, litters_df, by = "litter_number") |> 
+  select(litter_number, dose, day_of_treatment, everything()) 
+```
+
+  * anti_join --> allows you to explore what is missing from dataset after joining, what observations aren't in the righthand side from the lefthand side 
 
